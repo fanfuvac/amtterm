@@ -10,6 +10,11 @@ enum redir_state {
     REDIR_RUN_SOL   = 11,
     REDIR_INIT_IDER = 20,
     REDIR_RUN_IDER  = 21,
+	REDIR_INIT_IDER_1  = 22,
+	REDIR_INIT_IDER_2  = 23,
+	REDIR_INIT_IDER_3  = 24,
+	REDIR_INIT_IDER_4  = 25,
+	REDIR_INIT_IDER_5  = 26,
     REDIR_CLOSING   = 30,
     REDIR_CLOSED    = 31,
     REDIR_ERROR     = 40,
@@ -54,8 +59,16 @@ int redir_connect(struct redir *r);
 int redir_start(struct redir *r);
 int redir_stop(struct redir *r);
 int redir_auth(struct redir *r);
+int redir_ider_start(struct redir *r);
 int redir_sol_start(struct redir *r);
 int redir_sol_stop(struct redir *r);
 int redir_sol_send(struct redir *r, unsigned char *buf, int blen);
 int redir_sol_recv(struct redir *r);
 int redir_data(struct redir *r);
+int redir_enable_features(struct redir *r, int fid);
+char *copy_array(int start, int len, char *request, char data[]);
+int ider_command_handle(struct redir *r);
+int redir_handle_reset(struct redir *r);
+int get_counter(void);
+char *  load_data_iso(char *request, int len, int part, char * fileName);
+char* put_file_size(char *request, int len, char * fileName,int blocksize);

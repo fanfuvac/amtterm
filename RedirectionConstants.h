@@ -65,8 +65,9 @@
 #define IDER_GET_DATA_FROM_HOST             0x52
 #define IDER_DATA_FROM_HOST                 0x53
 #define IDER_DATA_TO_HOST                   0x54
+#define IDER_AFTER_RESET                    0x4a //dunno what this mean(hopefully nothning important)(maybe poorly handled 0x46)
 
-#define START_IDER_REDIRECTION_LENGTH                 18
+#define START_IDER_REDIRECTION_LENGTH                 18 //24?
 #define START_IDER_REDIRECTION_REPLY_LENGTH           30 //TODO: There is a OEM Defined data field that we are assuming to be 0 bytes..
 #define END_IDER_REDIRECTION_LENGTH                   8
 #define END_IDER_REDIRECTION_REPLY_LENGTH             8
@@ -79,7 +80,14 @@
 static const unsigned int SOL_SESSION = 0x204C4F53;
 static const unsigned int IDER_SESSION = 0x52454449;
 
-static const unsigned short MAX_TRANSMIT_BUFFER = 1000;
+/*static const unsigned short MAX_TRANSMIT_BUFFER = 1000;
+static const unsigned short TRANSMIT_BUFFER_TIMEOUT = 100;
+static const unsigned short TRANSMIT_OVERFLOW_TIMEOUT = 0;
+static const unsigned short HOST_SESSION_RX_TIMEOUT = 10000;
+static const unsigned short HOST_FIFO_RX_FLUSH_TIMEOUT = 0;
+static const unsigned short HEARTBEAT_INTERVAL = 5000;*/
+
+static const unsigned short MAX_TRANSMIT_BUFFER = 15000;
 static const unsigned short TRANSMIT_BUFFER_TIMEOUT = 100;
 static const unsigned short TRANSMIT_OVERFLOW_TIMEOUT = 0;
 static const unsigned short HOST_SESSION_RX_TIMEOUT = 10000;
@@ -91,4 +99,9 @@ static const unsigned int SOL_OEM_IANA_NUMBER = 0x6666;  //TODO: Test
 
 static const unsigned short RECEIVE_BUFFER_SIZE = 0x100;
 
+//static const unsigned int IDER_DATA_SIZE = 0x800;
+static const unsigned int IDER_DATA_SIZE_FD = 512;
+static const unsigned int IDER_DATA_HEADER_LEN = 34;
+
+static const unsigned int IDER_MAX_DATA_SIZE = 8192;
 #endif
