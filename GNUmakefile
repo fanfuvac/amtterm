@@ -7,7 +7,7 @@ include $(srcdir)/mk/Variables.mk
 CFLAGS	+= -Wall -Wno-pointer-sign
 CFLAGS	+= -DVERSION='"$(VERSION)"'
 
-TARGETS	:= amtterm
+TARGETS	:= amtterm ider
 DESKTOP := $(wildcard *.desktop)
 
 all: build
@@ -61,6 +61,7 @@ distclean: clean
 
 amtterm: amtterm.o redir.o tcp.o
 gamt: gamt.o redir.o tcp.o parseconfig.o
+ider: ider.o redir.o tcp.o
 
 #################################################################
 

@@ -42,6 +42,10 @@ struct redir {
     void *cb_data;
     void (*cb_state)(void *cb_data, enum redir_state old, enum redir_state new);
     int (*cb_recv)(void *cb_data, unsigned char *buf, int len);
+	
+	/* IDE redirection */
+	unsigned char cd[255];
+	unsigned char fd[255];
 };
 
 struct __attribute__ ((__packed__)) controls_from_host_message {
