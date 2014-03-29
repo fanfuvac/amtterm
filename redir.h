@@ -35,7 +35,7 @@ struct redir {
     unsigned char     err[128]; // state == REDIR_ERROR
 
     int               sock;
-    unsigned char     buf[64];
+    unsigned char     buf[1024]; //edited from 64, nobody expected large income of data? 
     unsigned int      blen;
 
     /* callbacks */
@@ -76,3 +76,4 @@ int redir_handle_reset(struct redir *r);
 int get_counter(void);
 char *  load_data_iso(char *request, int len, int part, char * fileName);
 char* put_file_size(char *request, int len, char * fileName,int blocksize);
+void handle0x52(struct redir *r);

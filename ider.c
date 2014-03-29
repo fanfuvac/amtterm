@@ -89,6 +89,7 @@ int main(int argc, char *argv[])
 
     memset(&r, 0, sizeof(r));
     r.verbose = 1;
+	r.trace=1;
     memcpy(r.type, "IDER", 4);
     strcpy(r.user, "admin");
 	
