@@ -74,6 +74,6 @@ char *copy_array(int start, int len, char *request, char data[]);
 int ider_command_handle(struct redir *r);
 int redir_handle_reset(struct redir *r);
 int get_counter(void);
-char *  load_data_iso(char *request, int len, int part, char * fileName);
-char* put_file_size(char *request, int len, char * fileName,int blocksize);
+char *  load_data_iso(char *request, int len, int part, bool fileType);
+char* put_file_size(char *request, int len, bool fileType,int blocksize);
 void handle0x52(struct redir *r);

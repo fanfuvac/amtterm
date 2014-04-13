@@ -29,6 +29,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdbool.h> 
 
 #include "tcp.h"
 #include "redir.h"
@@ -62,6 +63,8 @@ static const char *state_desc[] = {
     [ REDIR_ERROR     ] = "failure",
 };
 
+FILE *fileCD;
+FILE *fileFD;
 int state24=0;
 int state28=0;
 int state0000=0;
@@ -100,10 +103,17 @@ static void hexdump(const char *prefix, const unsigned char *data, size_t size)
 	fprintf(stderr," %s\n",ascii);
     }*/
 }
+void put_counter(char * buf){
+	int counter = get_counter();
+	memcpy(&buf[4], &counter, 4);
+	
+}
 
 static ssize_t redir_write(struct redir *r, const char *buf, size_t count)
 {
-    int rc,i,counter;
+	int flags = fcntl(r->sock,F_GETFL);
+	fcntl(r->sock,F_SETFL, flags & (~O_NONBLOCK));
+    int rc,i;
 	rc=0;
     if (r->trace)
 	hexdump("out", buf, count);
@@ -111,9 +121,8 @@ static ssize_t redir_write(struct redir *r, const char *buf, size_t count)
 	char*buf2=buf;
 	int to_write=IDER_MAX_DATA_SIZE+IDER_DATA_HEADER_LEN;
 	if(buf2[0]>0x30) {
-		counter = get_counter();
-		buf2[4]=counter%256;
-		buf2[5]=counter/256;
+		put_counter(buf2);
+		//printf("buf[4]  %x",buf2[4]);
 	}
 	fprintf(stderr, "out: ");
 	for(i=0;i<(count>40?40:count);i++){
@@ -121,41 +130,35 @@ static ssize_t redir_write(struct redir *r, const char *buf, size_t count)
 	}
 	fprintf(stderr, "\n");	
 	i=count;
+	char data[IDER_DATA_HEADER_LEN];
 	while(i>0){
 		rc = write(r->sock, buf2, i>to_write?to_write:i);
 		i-=to_write;
 		buf2+=to_write;
-		//printf("buf[14]: %x\n\n\n",r->buf[14]);
 		if(i>0){
 			to_write=IDER_MAX_DATA_SIZE;
-			
-			if(i>8192) {
-				
-				char data[]={0x54,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0xb4,0x00,0x02,0x00,0x00,0x00,r->buf[14],0x58,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-				counter=get_counter();
-				data[4]=counter%256;
-				data[5]=counter/256;
-				rc = write(r->sock,&data,IDER_DATA_HEADER_LEN);
+			if(i>8192&&r->buf[9]==0x00&&r->buf[10]==0x00) {
+				char data2[]={0x54,0x00,0x00,0x00,0x36,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0xb5,0x00,0x02,0x00,0x00,0x20,r->buf[14],0x58,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+				memcpy(data,data2,sizeof(data2));
+			}
+			else if(i>8192) {
+				char data2[]={0x54,0x00,0x00,0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0xb4,0x00,0x02,0x00,0x00,0x00,r->buf[14],0x58,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+				memcpy(data,data2,sizeof(data2));
 			}
 			else if(r->buf[9]==0x00&&r->buf[10]==0x00) { 
-					char data[]={0x54,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,i/256,0x00,0xb5,0x00,0x02,0x00,0x00,i/256,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-					counter=get_counter();
-					data[4]=counter%256;
-					data[5]=counter/256;
-					rc = write(r->sock,&data,IDER_DATA_HEADER_LEN);
+					char data2[]={0x54,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,i/256,0x00,0xb5,0x00,0x02,0x00,0x00,i/256,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+					memcpy(data,data2,sizeof(data2));
 				} //SJEDNOTIT!! KROMĚ 0X03 NĚKDE
 			else {
 				
-					char data[]={0x54,0x00,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x00,i/256,0x00,0xb4,0x00,0x02,0x00,0x00,0x00,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00};	
-					counter=get_counter();
-					data[4]=counter%256;
-					data[5]=counter/256;
-					rc = write(r->sock,&data,IDER_DATA_HEADER_LEN);
-				
+					char data2[]={0x54,0x00,0x00,0x03,0x00,0x00,0x00,0x00,0x00,0x00,i/256,0x00,0xb4,0x00,0x02,0x00,0x00,0x00,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00};	
+					memcpy(data,data2,sizeof(data2));
 			}
+			put_counter(data);
+			rc = write(r->sock,&data,IDER_DATA_HEADER_LEN);
 		}
 	}
-
+	
     if (-1 == rc)
 		snprintf(r->err, sizeof(r->err), "write(socket): %s", strerror(errno));
 	
@@ -350,12 +353,10 @@ int redir_enable_features(struct redir *r, int fid)
 int redir_handle_reset(struct redir *r){
 	int len = 8;
     int rc;
-    unsigned char *request = malloc(len);
-    memset(request, 0, len);
+    char request[len];
     request[0] = IDER_RESET_OCCURED_RESPONSE;
-    request[4] = r->buf[4]; //necessary??
     rc = redir_write(r, request, len);
-    free(request);
+ 
     return rc;
 }
 int redir_sol_recv(struct redir *r)
@@ -406,6 +407,8 @@ int redir_sol_recv(struct redir *r)
 }
 char *copy_array(int start, int len, char *request, char data[]){
 	int i;
+	//int counter = get_counter();
+	//memcpy(&buf[4], &counter, 4);
 	for (i=start;i<start+len;i++){
 		request[i]=data[i-start];
 	}
@@ -418,26 +421,22 @@ int get_counter(void){
 	//counter%=255;
 	return counter-1;
 }
-char* put_file_size(char *request, int len, char * fileName,int blocksize){
+char* put_file_size(char *request, int len, bool fileType,int blocksize){
 	FILE *file;
-	file = fopen(fileName, "rb");
+	if (fileType==0) file=fileFD;
+	else file=fileCD;
+	
 	fseek(file,0,SEEK_END);
 	int fileLen=ftell(file)/blocksize-1;
-	request[34]=(fileLen>>24)&0xFF;
-	request[35]=(fileLen>>16)&0xFF;
-	request[36]=(fileLen>>8)&0xFF;
-	request[37]=fileLen&0xFF;
-	fclose(file);
+	memcpy(&request[34], &fileLen, 4);
+	//printf([]
+	//fclose(file);
 	return request;
 }
-char *  load_data_iso(char *request, int len, int part, char * fileName){
+char *  load_data_iso(char *request, int len, int part, bool fileType){
 	FILE *file;
-
-	file = fopen(fileName, "rb");
-	if (!file)	{
-		fprintf(stderr, "Unable to open file %s", fileName);
-		return 0;
-	}
+	if (fileType==0) file=fileFD;
+	else file=fileCD;
 	
 	fseek(file,  part*IDER_DATA_SIZE,0);
 
@@ -452,7 +451,7 @@ char *  load_data_iso(char *request, int len, int part, char * fileName){
 
 	//Read file contents into buffer
 	fread(request+IDER_DATA_HEADER_LEN, 1,len, file);
-	fclose(file);
+	//fclose(file);
 
 	return request;
 
@@ -468,7 +467,7 @@ int ider_command_handle(struct redir *r){
 	memset(request, 0, len);
 	if((r->buf[14]==0xb0&&r->buf[15]==0xa0)||(r->buf[14]==0xa0&&r->buf[15]==0xa0)||(r->buf[14]==0x10&&r->buf[15]==0xa0)){
 		request[3] = 0x02;
-		if(r->buf[12] == 0x00||r->buf[12] == 0xff){
+		if(r->buf[12] == 0x00||r->buf[12] == 0xff||r->buf[12] == 0xfe){
 			if(r->buf[13] == 0x00){
 
 				if (r->buf[4]<0x10||(state0000==0&&r->buf[14]==0xa0)) {
@@ -509,20 +508,24 @@ int ider_command_handle(struct redir *r){
 					IDER_DATA_SIZE=2048;
 					len=IDER_DATA_SIZE*r->buf[13]/0x08;
 				}
-				if(r->buf[24]!=0) len=IDER_DATA_SIZE*r->buf[24]; //experimental //hopefully OK, try it ASAP
-				//if(r->buf[13]==0xff) len = IDER_DATA_SIZE*r->buf[24];
-
-				if(r->buf[14]==0xb0||r->buf[13]==0xff) request=load_data_iso(request, len, pos, r->cd); //posílam iso i při bootu, posílat FD místo toho? (v případě povolení bootování z FD v BIOSu bych pravděpodobně posílal CD)
-				else {
-					//IDER_DATA_SIZE=512;
-					request=load_data_iso(request, len, pos, r->fd); //velikost se počítá po 2048 ale pozice
-				
-				}			
-				len+=IDER_DATA_HEADER_LEN;	
-				if(r->buf[13]==0xff) {
+				//if(r->buf[24]!=0) len=IDER_DATA_SIZE*r->buf[24]; //experimental //hopefully OK, try it ASAP
+				if(r->buf[13]==0xff &&r->buf[14]==0x10) {
+					len = IDER_DATA_SIZE*r->buf[24];
 					r->buf[13]=0x08;
 					r->buf[14]=0xb0;
 				}
+
+				if(r->buf[14]==0xb0||r->buf[13]==0xff) request=load_data_iso(request, len, pos, 1); //posílam iso i při bootu, posílat FD místo toho? (v případě povolení bootování z FD v BIOSu bych pravděpodobně posílal CD)
+				else {
+					//IDER_DATA_SIZE=512;
+					request=load_data_iso(request, len, pos, 0); //velikost se počítá po 2048 ale pozice
+				
+				}			
+				len+=IDER_DATA_HEADER_LEN;	
+				/*if(r->buf[13]==0xff) {
+					r->buf[13]=0x08;
+					r->buf[14]=0xb0;
+				}*/
 				if(r->buf[13]/0x08>4&&(r->buf[9]==0x00&&r->buf[10]==0x00)) {
 					//printf("if before restart than be aware!!\n\n");
 					char data[]={0x54,0x00,0x00,0x00,0x9c,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0xb5,0x00,0x02,0x00,0x00,0x20,r->buf[14],0x58,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
@@ -559,17 +562,30 @@ int ider_command_handle(struct redir *r){
 			request = realloc(request,len);
 			char data[]={0x54,0x00,0x00,0x02,0x1a,0x00,0x00,0x00,0x00,0x08,0x00,0x00,0xb5,0x00,0x02,0x00,0x08,0x00,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0c,0x58,0x00,0x00,0x08,0x00 };
 			request=copy_array(0,len,request,data);
-			if(r->buf[14]==0xb0) request=put_file_size(request, len,r->cd,type);
+			if(r->buf[14]==0xb0) request=put_file_size(request, len,1,type);
 			else {
-				request=put_file_size(request, len,r->fd,type);
+				request=put_file_size(request, len,0,type);
 				request[40]=0x02;
 			}
 		}
 		else if(r->buf[12] == 0x0c){ 
 			len=46;
 			request = realloc(request,len);
-			char data[]={0x54,0x00,0x00,0x02,0x20,0x00,0x00,0x00,0x00,0x0c,0x00,0x00,0xb5,0x00,0x02,0x00,0x0c,0x00,0xb0,0x58,0x85,0x00,0x03,0x00,0x00,0x00,0xb0,0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0a,0x01,0x01,0x00,0x14,0x01,0x00,0x00,0x00,0x00,0x00};
+			char data[]={0x54,0x00,0x00,0x02,0x20,0x00,0x00,0x00,0x00,0x0c,0x00,0x00,0xb5,0x00,0x02,0x00,0x0c,0x00,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0a,0x01,0x01,0x00,0x14,0x01,0x00,0x00,0x00,0x00,0x00};
 			request=copy_array(0,len,request,data);
+		}
+		else if(r->buf[12] == 0x18){ 
+			len=50;
+			request = realloc(request,len);
+			char data[]={0x54,0x00,0x00,0x02,0x2b,0x00,0x00,0x00,0x00,0x10,0x00,0x00,0xb5,0x00,0x02,0x00,0x10,0x00,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x0c,0x00,0x00,0x00,0x08,0x01,0x00,0x03,0x00,0x01,0x05,0x03,0x00};
+			request=copy_array(0,len,request,data);
+		}	
+		else if(r->buf[12] == 0x20){
+			len=66;
+			request = realloc(request,len);
+			char data[]={0x54,0x00,0x00,0x02,0x84,0x01,0x00,0x00,0x00,0x20,0x00,0x00,0xb5,0x00,0x02,0x00,0x20,0x00,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x3c,0x00,0x00,0x00,0x08,0x00,0x00,0x03,0x04,0x00,0x08,0x01,0x00,0x00,0x01,0x03,0x04,0x00,0x00,0x00,0x02,0x00,0x02,0x03,0x04,0x00,0x00,0x00,0x00};
+			request=copy_array(0,len,request,data);
+			
 		}
 		else if(r->buf[12] == 0x28){
 			if(r->buf[14]==0xa0){
@@ -741,7 +757,7 @@ int ider_command_handle(struct redir *r){
 			request=copy_array(0,len,request,data);
 			//len=512*r->buf[13]/0x08;
 			//printf("pos: %i\n",pos);
-			request=load_data_iso(request, 512, 0, r->fd);
+			request=load_data_iso(request, 512, 0, 0);
 			request=copy_array(0,IDER_DATA_HEADER_LEN,request,data);
 
 		}
@@ -809,6 +825,7 @@ int redir_data(struct redir *r)
     }
 	fprintf(stderr, "in:  ");
 	for(i=0;i<rc;i++){
+		if (i%4==0)	fprintf(stderr, "  ");
 		fprintf(stderr, "%02X ",r->buf[i]);
 	}
 	fprintf(stderr, "\n");
@@ -935,7 +952,8 @@ int redir_data(struct redir *r)
 	  break;
 	}
 	case START_IDER_REDIRECTION_REPLY:{
-	//printf("aha, sem vůl\n");
+		fileCD = fopen(r->cd, "rb");
+		fileFD = fopen(r->fd, "rb");
 		bshift = r->blen;
 		redir_enable_features(r,1);
 		redir_state(r, REDIR_INIT_IDER_2);
