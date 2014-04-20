@@ -1,5 +1,6 @@
 #include "RedirectionConstants.h"
 #include <stdint.h>
+#include <stdbool.h>
 
 enum redir_state {
     REDIR_NONE      =  0,
@@ -19,6 +20,14 @@ enum redir_state {
     REDIR_CLOSED    = 31,
     REDIR_ERROR     = 40,
 };
+
+struct ider_state_struct{
+	int state24;
+	int state28;
+	int state0000;
+	int state10a0;
+
+}ider_state;
 
 struct redir {
     /* host connection */
@@ -59,6 +68,8 @@ struct __attribute__ ((__packed__)) controls_from_host_message {
 const char *redir_state_name(enum redir_state state);
 const char *redir_state_desc(enum redir_state state);
 
+//ider_state_struct ider_state;
+
 int redir_connect(struct redir *r);
 int redir_start(struct redir *r);
 int redir_stop(struct redir *r);
@@ -77,3 +88,9 @@ int get_counter(void);
 char *  load_data_iso(char *request, int len, int part, bool fileType);
 char* put_file_size(char *request, int len, bool fileType,int blocksize);
 void handle0x52(struct redir *r);
+void put_counter(char * buf);
+unsigned char * send_data(struct redir *r,unsigned char *request, int * len);
+int check_images(struct redir *r);
+
+FILE *fileCD;
+FILE *fileFD;

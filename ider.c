@@ -11,15 +11,15 @@
 
 #include "redir.h"
 
-#define APPNAME "amtterm"
+#define APPNAME "ider"
 #define BUFSIZE 512
 
 static void usage(FILE *fp)
 {
     fprintf(fp,
             "\n"
-	    "This is " APPNAME ", release " VERSION ", I'll establish\n"
-	    "serial-over-lan (sol) connections to your Intel AMT boxes.\n"
+	    "This is " APPNAME ", release " VERSION ", I'll redirect\n"
+	    "iso image of CD and img image of floppy to your Intel AMT boxes.\n"
             "\n"
             "usage: " APPNAME " [options] host [port]\n"
             "options:\n"
@@ -33,13 +33,42 @@ static void usage(FILE *fp)
             "\n"
             "By default port 16994 is used.\n"
 	    "If no password is given " APPNAME " will ask for one.\n"
+		"-c and -f must both be used. Cannot redirect only one of CD/FD."
             "\n"
             "-- \n"
             "Based on amtterm by Gerd Hoffmann.\n"
 			"(c) 2014 Václav Fanfule <fanfuvac@fit.cvut.cz>\n"
 	    "\n");
 }
+static int recv_tty(void *cb_data, unsigned char *buf, int len)
+{
+//    struct redir *r = cb_data;
 
+    return write(STDOUT_FILENO, buf, len);
+}
+
+static void state_tty(void *cb_data, enum redir_state old, enum redir_state new)
+{
+    struct redir *r = cb_data;
+
+    if (r->verbose)
+	fprintf(stderr, APPNAME ": %s -> %s (%s)\n",
+		redir_state_name(old), redir_state_name(new),
+		redir_state_desc(new));
+    switch (new) {
+    case REDIR_RUN_SOL:
+	if (r->verbose)
+	    fprintf(stderr,
+		    "serial-over-lan redirection ok\n"
+		    "connected now, use ^] to escape\n");
+	break;
+    case REDIR_ERROR:
+	fprintf(stderr, APPNAME ": ERROR: %s\n", r->err);
+	break;
+    default:
+	break;
+    }
+}
 static int redir_loop(struct redir *r)
 {
     //unsigned char buf[BUFSIZE+1];
@@ -48,6 +77,10 @@ static int redir_loop(struct redir *r)
     fd_set set;
 	printf("%i\n",r->state);
     //int i=0;
+	ider_state.state24=0;
+	ider_state.state28=0;
+	ider_state.state0000=0;
+	ider_state.state10a0=0;
 	for(i=0;;i++) {
 		if (r->state == REDIR_CLOSED ||
 			r->state == REDIR_ERROR){
@@ -80,6 +113,19 @@ static int redir_loop(struct redir *r)
     }
     return 0;
 }
+int check_images(struct redir *r){
+	fileCD = fopen(r->cd, "rb");
+	fileFD = fopen(r->fd, "rb");
+	if (fileCD==0||fileFD==0){
+		return -1;
+	}
+	fseek ( fileCD , 0 , SEEK_END );
+	fseek ( fileFD , 0 , SEEK_END );
+	if( ftell(fileCD)<IDER_MAX_DATA_SIZE || ftell(fileFD)<IDER_MAX_DATA_SIZE){
+		return -1;
+	}
+	return 0;
+}
 //***********************************************************************//
 int main(int argc, char *argv[])
 {
@@ -89,13 +135,13 @@ int main(int argc, char *argv[])
 
     memset(&r, 0, sizeof(r));
     r.verbose = 1;
-	r.trace=1;
+	r.trace=0;
     memcpy(r.type, "IDER", 4);
     strcpy(r.user, "admin");
 	
     r.cb_data  = &r;
-    //r.cb_recv  = recv_tty;
-    //r.cb_state = state_tty;
+    r.cb_recv  = recv_tty;
+    r.cb_state = state_tty;
 
     if (NULL != (h = getenv("AMT_PASSWORD")))
 	snprintf(r.pass, sizeof(r.pass), "%s", h);
@@ -162,6 +208,10 @@ int main(int argc, char *argv[])
     }
 
     //tty_raw();
+	if (-1 == check_images(&r)) {
+		fprintf(stderr,"Cannot open CD or FD image or file too small");
+		exit(1);
+	}
     redir_start(&r);
     redir_loop(&r);
     //tty_restore();
