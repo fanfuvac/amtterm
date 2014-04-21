@@ -150,7 +150,7 @@ static ssize_t redir_write(struct redir *r, const char *buf, size_t count)
 				memcpy(data,data2,sizeof(data2));
 			}
 			else if(r->buf[9]==0x00&&r->buf[10]==0x00) { 
-					char data2[]={0x54,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,i/256,0x00,0xb5,0x00,0x02,0x00,0x00,i/256,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+					char data2[]={0x54,0x00,0x00,0x02,0x00,0x00,0x00,0x00,0x00,0x00,i/256,0x00,0xb5,0x00,0x02,0x00,0x00,i/256,r->buf[14],0x58,0x85,0x00,0x03,0x00,0x00,0x00,r->buf[14],0x50,0x00,0x00,0x00,0x00,0x00,0x00};
 					memcpy(data,data2,sizeof(data2));
 				} //SJEDNOTIT!! KROMĚ 0X03 NĚKDE
 			else {
@@ -448,8 +448,8 @@ char *  load_data_iso(char *request, int len, int part, bool fileType){
 	}
 
 	//Read file contents into buffer
-	fread(request+IDER_DATA_HEADER_LEN, 1,len, file);
-
+	if (fread(request+IDER_DATA_HEADER_LEN, 1,len, file)!=len) return (char *)0;
+	
 	return request;
 
 }
@@ -984,12 +984,11 @@ int redir_data(struct redir *r)
 		break;
 	}
 	case IDER_RESET_OCCURED:{
-		printf("reset\n");
 		redir_handle_reset(r);
 		bshift = r->blen;
 		break;
 	}
-	case IDER_AFTER_RESET:{ //přejmenovat! jedná se o reakci na špatná data která mu zasílám, obvykle se tento požadavek rovná konci
+	case IDER_AFTER_RESET:{
 		printf("unknown demand\n");
 		int len = 8;
 		//int rc;

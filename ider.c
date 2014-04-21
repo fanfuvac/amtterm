@@ -24,7 +24,6 @@ static void usage(FILE *fp)
             "usage: " APPNAME " [options] host [port]\n"
             "options:\n"
             "   -h            print this text\n"
-            "   -v            verbose (default)\n"
             "   -q            quiet\n"
             "   -u user       username (default: admin)\n"
             "   -p pass       password (default: $AMT_PASSWORD)\n"
@@ -135,7 +134,7 @@ int main(int argc, char *argv[])
 
     memset(&r, 0, sizeof(r));
     r.verbose = 1;
-	r.trace=0;
+	r.trace= 0;
     memcpy(r.type, "IDER", 4);
     strcpy(r.user, "admin");
 	
@@ -192,7 +191,7 @@ int main(int argc, char *argv[])
     if (0 == strlen(r.pass)) {
 	//tty_noecho();
 	fprintf(stderr, "AMT password for host %s: ", r.host);
-	fgets(r.pass, sizeof(r.pass), stdin);
+	if(!fgets(r.pass, sizeof(r.pass), stdin)) exit(1);
 	fprintf(stderr, "\n");
 	if (NULL != (h = strchr(r.pass, '\r')))
 	    *h = 0;
